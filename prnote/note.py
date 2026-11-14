@@ -529,7 +529,7 @@ Please generate an evidence-anchored review note following the specified format.
         prompt=user_prompt,
         system=system_prompt,
         model=model,
-        temperature=0.3
+        temperature=0.0
     )
     
     # Save output
@@ -672,6 +672,6 @@ Please generate an evidence-anchored review note following the specified format.
         prompt=user_prompt,
         system=system_prompt,
         model=model,
-        temperature=0.3
+        temperature=0.0
     )
 
