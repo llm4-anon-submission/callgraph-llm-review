@@ -5,20 +5,75 @@
 > artefacts (CPG binaries, embedding indices, repository checkouts) and the
 > public archive link will be released on acceptance.
 
-Code, data and results for the thesis
-*An Empirical Study of Knowledge-Graph-Driven Context Retrieval for LLM-Based
-Pull-Request Review Comments* (Anonymous Author(s)). The thesis asks how repository context changes LLM-generated
+Code, data and results for the paper
+*Structural Context for LLM Code Review: An Empirical Comparison with Embedding
+Retrieval* (Anonymous Author(s)). The paper asks how repository context changes LLM-generated
 pull-request reviews, comparing four modes — diff-only **baseline**, **KG**
 (diff + structural edges from a Joern code property graph), **RAG** (diff +
 embedding-similar code) and **hybrid** (both) — in three studies:
 
 | Study | Question | Data | Headline |
 |---|---|---|---|
-| Experiment 1 | Which context helps rubric coverage? | 35 merged PRs, 5 repos, 25-criterion rubric, 5-judge LLM panel | KG +0.69 on the 9 structural criteria (p = 0.003); RAG +1.03 on the full rubric (p = 0.002); hybrid retains neither after correction |
-| Experiment 2 | Can the reviewer name cross-file consequences? | 28 injected cross-file defects + 12 local controls, deterministic oracle | baseline 0/28, RAG 5/28, KG 18/28, KG + inheritance 26/28 |
-| Human study | Do people see the difference? | 27 raters × 6 Python PRs, blinded pairwise | KG preferred for naming affected code (0.710 vs 0.5, p = 0.0005); no preference on overall usefulness; baseline preferred on clarity |
+| Experiment 1 (paper: RQ2) | Which context helps rubric coverage? | 35 merged PRs, 5 repos, 25-criterion rubric, 5-judge LLM panel | KG +0.69 on the 9 structural criteria (p = 0.003); RAG +1.03 on the full rubric (p = 0.002); hybrid retains neither after correction |
+| Experiment 2 (paper: RQ1) | Can the reviewer name cross-file consequences? | 28 injected cross-file defects + 12 local controls, deterministic oracle | baseline 0/28, RAG 5/28, KG 18/28, KG + inheritance 26/28 |
+| Human study (paper: RQ3) | Do people see the difference? | 27 raters × 6 Python PRs, blinded pairwise | KG preferred for naming affected code (0.710 vs 0.5, p = 0.0005); no preference on overall usefulness; baseline preferred on clarity |
 
 The LaTeX source of the thesis is in [`thesis/`](thesis/).
+
+**Terminology.** The paper calls the structural-context mode **CG** (call-graph
+context: caller/callee relationships plus importing files, tests and code
+owners); this repository and its file names call it **KG**. They are the same
+mode. Inside the repository, *Experiment 1* is the paper's RQ2 (35 real PRs),
+*Experiment 2* is RQ1 (28 seeded cross-file bugs), and the *human study* is RQ3.
+The paper's "CG+I" is the repository's "KG + inheritance" arm (links added from
+the resolver that defines the ground truth); "CG-file" is the file-level,
+import-based graph used in the human study.
+
+## Review-quality rubric (25 criteria) and the nine graph-relevant criteria
+
+Every generated review in Experiment 1 is scored against a fixed 25-item
+yes/no rubric (eight groups). Nine of the 25 are tagged `kg_relevant`: these
+are the criteria that structural context is expected to affect, and the primary
+Experiment 1 test is the KG/CG gain on exactly these nine.
+
+| ID | Group | Criterion (abridged) |
+|----|-------|----------------------|
+| F3 | Functionality | Checks how the change integrates with existing components, APIs or modules |
+| F4 | Functionality | Warns about breaking changes or impact on dependent code |
+| T1 | Tests | Asks about or discusses the need for unit/integration tests |
+| T2 | Tests | Mentions testing edge cases, error paths or failure scenarios |
+| T3 | Tests | References specific test files or says which tests to add/update |
+| M1 | Maintainability | Assesses fit with the existing architecture or design patterns |
+| M3 | Maintainability | Checks that public APIs/interfaces are documented |
+| C2 | Consistency | Checks that similar problems are solved consistently with existing patterns |
+| Q2 | Quality | Anchors comments to specific code locations (file paths, line numbers) |
+
+Where to find the full rubric, mappings and votes:
+
+| What | Location |
+|---|---|
+| Full 25-criterion rubric (IDs, wording, `kg_relevant` flag) and judge prompt | `scripts/evaluate_reviews.py` (`EVALUATION_CRITERIA`) |
+| Source of each criterion and the content-based mapping of the nine criteria to what the graph supplies | `results/RUBRIC_PROVENANCE.md` (sections 2 and 3) |
+| Agreement check on the `kg_relevant` tag (kappa 0.615, 84% agreement) and positive control | `results/RUBRIC_PROVENANCE.md` (section 5), `results/RUBRIC_KAPPA_kg_relevant.md`, `scripts/validate_kg_relevant_kappa.py` |
+| Per-judge votes for all 140 reviews (35 PRs x 4 modes) x 25 criteria, abstentions, majority threshold | `experiments/2026-10-04_joern_unified_five_judge/RESULTS.json` (summary in `RESULTS.md`) |
+| Judge-panel robustness runs (40-PR panel) | `experiments/2026-09-23_five_judge_panel/RESULTS.{md,json}` |
+| Background on how the rubric was derived (an earlier analysis stage; the paper's nine-criterion test is the one defined above) | `results/CRITERIA_DERIVATION.md` |
+
+**Voting rule.** Five judges (GPT-4o, Gemini 2.5 Flash, Claude Sonnet 4.5,
+DeepSeek V4 Pro, Grok 4.6) vote on each criterion. A judge may abstain (coded
+`-1` in the JSON). A criterion is scored only if at least four of the five votes
+are valid; it is met if a strict majority of the valid votes say so (3 of 5, or
+3 of 4), and a tie counts as not met. In the 35-PR run no cell had fewer than
+four valid votes: of 3,500 criterion-review cells, 3,396 had five valid votes
+and 104 had four (all 104 are Gemini abstentions; 2 of them were 2-2 ties and
+counted as not met).
+
+**What the graph block contains.** The KG/CG block lists caller to callee
+function edges (at most 12 distinct edges, in the order Joern returns them),
+files that depend on the changed code (callers located in files that the PR
+itself changes are excluded from this list), importing files, related tests and
+code owners (`prnote/note.py`, `format_kg_context`; evidence assembly in
+`experiments/2026-09-19_joern_replace_grep/run.py`).
 
 ## Layout
 
